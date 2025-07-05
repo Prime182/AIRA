@@ -1,0 +1,149 @@
+Project Title: AIRA- AI-Powered Research Agent with MCP, RAG, Vector DB, LangChain, and Gemini API
+
+Abstract:
+
+AIRA is an intelligent research assistant designed to retrieve, summarize, and answer questions using scientific literature. It combines local and online paper sources, multi-source context routing (via MCP), a vector database for document embedding and retrieval, and Gemini LLM for high-quality summarization and Q&A. The system mimics a chatbot that can intelligently answer complex research questions with context from both APIs (e.g., arXiv) and the user’s own documents. It includes memory, citation generation, and modular components for scalability and learning.
+
+End-to-End Implementation Instructions:
+
+🔁 1. Environment Setup
+
+Create project folder:
+
+mkdir ai-research-agent && cd ai-research-agent
+git init
+
+Create virtual environment and activate:
+
+python -m venv .venv
+.venv\Scripts\activate  # On Windows
+source .venv/bin/activate  # On Mac/Linux
+
+Install base dependencies:
+
+pip install flask langchain chromadb python-dotenv streamlit
+pip freeze > requirements.txt
+
+📂 2. Folder Structure
+
+ai-research-agent/
+├── mcp_server.py
+├── context_router.py
+├── requirements.txt
+├── .env
+├── .gitignore
+├── modules/
+│   ├── rag_pipeline.py
+│   ├── gemini_llm.py
+│   └── memory.py
+├── context_sources/
+│   ├── arxiv_api.py
+│   ├── user_local_files.py
+│   └── github_docs.py
+├── utils/
+│   └── mcp_schema.py
+├── vector_store/
+├── data/
+├── logs/
+├── ui/
+│   └── streamlit_app.py
+└── graphs/
+    └── langgraph_workflow.py
+
+🛠️ 3. MCP Server (mcp_server.py)
+
+Set up Flask route /query
+
+Parse JSON payload: query, context_sources
+
+Call fetch_all_context(query, sources) from context_router.py
+
+Return dummy context (initially) or later, pass to RAG pipeline
+
+🔄 4. Context Router (context_router.py)
+
+Define a dictionary of source-specific fetchers
+
+Implement fetch_all_context(query, sources)
+
+Dynamically call each fetcher and return combined context
+
+🧠 5. Source Fetchers (context_sources/*.py)
+
+arxiv_api.py: Connect to arXiv API or return dummy papers
+
+user_local_files.py: Read .pdf or .txt files from data/
+
+github_docs.py: Clone repo or read markdown files
+
+🔎 6. Embedding + Vector DB (modules/rag_pipeline.py)
+
+Use Sentence Transformers to embed paper chunks
+
+Store and retrieve with ChromaDB
+
+Implement similarity search for user queries
+
+💡 7. Gemini Integration (modules/gemini_llm.py)
+
+Set up google.generativeai client with API key
+
+Create prompt templates for:
+
+Summarization
+
+Direct Q&A
+
+Citation response
+
+📅 8. Memory (modules/memory.py)
+
+Use LangChain ConversationBufferMemory
+
+Store memory per session/user
+
+🔐 9. Secure API Keys (.env)
+
+GEMINI_API_KEY=your_api_key_here
+
+Use dotenv.load_dotenv() in gemini_llm.py to access the key.
+
+🔍 10. Test the API Endpoint
+
+Use PowerShell:
+
+Invoke-RestMethod -Uri http://127.0.0.1:5000/query -Method POST -ContentType "application/json" -Body '{"query": "What is federated learning?", "context_sources": ["arxiv_api", "user_local_files"]}'
+
+📘 11. LangGraph Workflow (graphs/langgraph_workflow.py)
+
+Install: pip install langgraph
+
+Define workflow graph (nodes = fetch, rerank, summarize)
+
+Use LangChain tools as nodes; define pathing logic for flow
+
+Run graph with input query and context
+
+📈 12. LangSmith Monitoring
+
+Install: pip install langsmith
+
+Create account and get API key from https://smith.langchain.com
+
+Track session, node performance, and hallucinations
+
+Add logging inside LangChain chains with LangSmith handlers
+
+💬 13. Streamlit Chatbot UI (ui/streamlit_app.py)
+
+Install: pip install streamlit
+
+Use st.chat_input() for user queries
+
+Display streamed Gemini response
+
+Save past messages to show chat memory
+
+Add dropdown to select source types
+
+Run with: streamlit run ui/streamlit_app.py

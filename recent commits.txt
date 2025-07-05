@@ -1,0 +1,19 @@
+- Created ui and graphs directories.
+- Implemented Streamlit UI in ui/streamlit_app.py.
+- Implemented LangGraph workflow in graphs/langgraph_workflow.py.
+- Updated mcp_server.py to integrate context router, RAG pipeline, and Gemini LLM.
+- Implemented context router in context_router.py.
+- Implemented source fetchers for arXiv, local files, and GitHub.
+- Implemented RAG pipeline with ChromaDB and Sentence Transformers in modules/rag_pipeline.py.
+- Implemented Gemini LLM integration in modules/gemini_llm.py.
+- Created .env file for API key management.
+- Fixed PyTorch installation issue by reinstalling torch.
+- Fixed deprecation warning for SentenceTransformerEmbeddings.
+- Added missing dependencies to requirements.txt (GitPython, langchain-community, sentence-transformers).
+- Fixed a TypeError in the Gemini module by flattening the context list.
+- Added robust error handling to the arXiv API fetching logic.
+
+Refactored the Flask server to be MCP compliant.
+- Updated the Streamlit UI to call the new MCP tool endpoint.
+- Fixed a TypeError in the Gemini module by flattening the context list.
+- Added robust error handling to the arXiv API fetching logic.
