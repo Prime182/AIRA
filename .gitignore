@@ -1,0 +1,32 @@
+# Python + LangChain + Vector DB
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.log
+
+#  Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+
+# Vector DB + Data
+vector_store/
+data/
+logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Tests
+.coverage
+htmlcov/
+*.pytest_cache/
