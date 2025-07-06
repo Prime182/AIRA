@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from pydantic import ValidationError
 from context_router import fetch_all_context
-from modules.rag_pipeline import process_and_store_documents, query_vector_db
+from modules.rag_pipeline import process_and_store_documents, query_vector_db, delete_session_collection, collection_exists
 from modules.gemini_llm import get_gemini_response
 from utils.mcp_schema import server_info, ResearchAgentQueryInput
 import uuid
@@ -52,14 +52,22 @@ def start_chat():
         session_id = data.get("session_id")
         document_ids = data.get("document_ids")
 
-        if not session_id or not document_ids:
-            return jsonify({"error": "Session ID and document IDs are required."}), 400
+        if not session_id:
+            return jsonify({"error": "Session ID is required."}), 400
+
+        # Check if the collection for this session already exists
+        if collection_exists(session_id):
+            return jsonify({"status": "success", "session_id": session_id, "message": "Session already exists and re-initialized."})
+
+        # If collection does not exist, we need document_ids to create it
+        if not document_ids:
+            return jsonify({"error": "Document IDs are required to start a new session."}), 400
 
         # Retrieve the full Document objects from the cache
         docs_to_process = [document_cache[doc_id] for doc_id in document_ids if doc_id in document_cache]
         
         if not docs_to_process:
-            return jsonify({"error": "No valid documents found to process."}), 400
+            return jsonify({"error": "No valid documents found in cache to process. Please fetch documents first or provide valid document IDs."}), 400
 
         # Process and store these specific documents in a session-specific collection
         process_and_store_documents(docs_to_process, collection_name=session_id)
@@ -86,6 +94,25 @@ def chat():
         response = get_gemini_response(query, relevant_context)
         
         return jsonify({"response": response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/delete_session", methods=["POST"])
+def delete_session():
+    """Deletes a specific chat session and its associated vector store."""
+    try:
+        data = request.get_json()
+        session_id = data.get("session_id")
+
+        if not session_id:
+            return jsonify({"error": "Session ID is required."}), 400
+
+        delete_session_collection(session_id)
+        
+        # Optionally, remove from in-memory cache if you track sessions there
+        # For now, we only delete the ChromaDB collection
+
+        return jsonify({"status": "success", "message": f"Session '{session_id}' and its data deleted."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

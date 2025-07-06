@@ -49,3 +49,24 @@ def query_vector_db(query: str, collection_name: str, n_results=5) -> list:
     except Exception as e:
         print(f"Error querying collection {collection_name}: {e}")
         return []
+
+def delete_session_collection(collection_name: str):
+    """
+    Deletes a specific ChromaDB collection associated with a session.
+    """
+    try:
+        client.delete_collection(name=collection_name)
+        print(f"Collection '{collection_name}' deleted successfully.")
+    except Exception as e:
+        print(f"Error deleting collection '{collection_name}': {e}")
+        raise # Re-raise the exception to be handled by the calling function
+
+def collection_exists(collection_name: str) -> bool:
+    """
+    Checks if a ChromaDB collection with the given name exists.
+    """
+    try:
+        client.get_collection(name=collection_name)
+        return True
+    except Exception: # ChromaDB raises ValueError if collection not found
+        return False
