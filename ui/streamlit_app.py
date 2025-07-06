@@ -1,8 +1,22 @@
 import streamlit as st
 import requests
 import uuid
+import json
+import os
 
 st.title("AIRA - AI-Powered Research Agent")
+
+CHAT_SESSIONS_FILE = "chat_sessions.json"
+
+def load_chat_sessions():
+    if os.path.exists(CHAT_SESSIONS_FILE):
+        with open(CHAT_SESSIONS_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_chat_sessions(sessions):
+    with open(CHAT_SESSIONS_FILE, "w") as f:
+        json.dump(sessions, f, indent=4)
 
 # --- Session State Initialization ---
 if "session_id" not in st.session_state:
@@ -10,7 +24,7 @@ if "session_id" not in st.session_state:
     st.session_state.messages = []
     st.session_state.fetched_docs = []
     st.session_state.selected_docs = []
-    st.session_state.past_chats = {}
+    st.session_state.past_chats = load_chat_sessions() # Load existing sessions
     st.session_state.app_stage = "fetching"
 
 # --- Sidebar for Chat History and New Chat ---
@@ -25,12 +39,26 @@ with st.sidebar:
         st.rerun()
 
     if st.session_state.past_chats:
-        for chat_id, chat_data in st.session_state.past_chats.items():
-            if st.button(f"Chat on: {chat_data['topic']}", key=chat_id):
-                st.session_state.session_id = chat_id
-                st.session_state.messages = chat_data["messages"]
-                st.session_state.app_stage = "chatting"
-                st.rerun()
+        # Create a list of chat IDs to iterate over, as the dictionary might change during iteration
+        chat_ids_to_display = list(st.session_state.past_chats.keys())
+        for chat_id in chat_ids_to_display:
+            chat_data = st.session_state.past_chats[chat_id]
+            col1, col2 = st.columns([0.7, 0.3])
+            with col1:
+                if st.button(f"Chat on: {chat_data['topic']}", key=f"load_{chat_id}"):
+                    st.session_state.session_id = chat_id
+                    st.session_state.messages = chat_data["messages"]
+                    st.session_state.app_stage = "chatting"
+                    st.rerun()
+            with col2:
+                if st.button("Delete", key=f"delete_{chat_id}"):
+                    del st.session_state.past_chats[chat_id]
+                    save_chat_sessions(st.session_state.past_chats) # Save after deletion
+                    if st.session_state.session_id == chat_id: # If current chat is deleted, start new one
+                        st.session_state.session_id = str(uuid.uuid4())
+                        st.session_state.messages = []
+                        st.session_state.app_stage = "fetching"
+                    st.rerun()
 
 # --- Main App Logic ---
 
@@ -113,6 +141,7 @@ elif st.session_state.app_stage == "chatting":
             with st.chat_message("assistant"):
                 st.markdown(assistant_response)
     
-    # Update past chats history
+    # Update past chats history and save
     if st.session_state.session_id in st.session_state.past_chats:
         st.session_state.past_chats[st.session_state.session_id]["messages"] = st.session_state.messages
+        save_chat_sessions(st.session_state.past_chats) # Save after message update
