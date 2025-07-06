@@ -4,7 +4,7 @@ from context_sources import arxiv_api, user_local_files, github_docs
 SOURCE_FETCHERS = {
     "arxiv_api": arxiv_api.fetch_papers,
     "user_local_files": user_local_files.read_files,
-    "github_docs": github_docs.fetch_docs,
+    "github_docs": github_docs.fetch_docs, # Re-added for general context fetching
 }
 
 def fetch_all_context(query: str, sources: list) -> list:

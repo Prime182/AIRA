@@ -90,12 +90,19 @@ if st.session_state.app_stage == "fetching":
 
     if st.session_state.fetched_docs:
         st.header("2. Select Documents to Analyze")
-        selected_titles = []
+        selected_ids = []
         for doc in st.session_state.fetched_docs:
-            if st.checkbox(f"{doc['title']}", key=doc['id']):
-                selected_titles.append(doc['id'])
+            # Display the title (repo name and owner for GitHub docs)
+            checkbox_label = doc.get('title', doc.get('source', 'Unknown Document'))
+            
+            # Use an expander to show the content (description and README preview)
+            with st.expander(checkbox_label, expanded=True): # Set expanded to True
+                st.markdown(doc.get('content', 'No content preview available.'))
+                # Add a checkbox inside the expander for selection
+                if st.checkbox(f"Select this document", key=doc['id']):
+                    selected_ids.append(doc['id'])
         
-        st.session_state.selected_docs = selected_titles
+        st.session_state.selected_docs = selected_ids
 
         if st.button("Start Chat with Selected Documents"):
             with st.spinner("Processing documents and starting chat..."):

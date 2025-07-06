@@ -1,6 +1,6 @@
 import arxiv
 
-def fetch_papers(query: str, max_results=5) -> list:
+def fetch_papers(query: str, max_results=10) -> list:
     """
     Fetches papers from the arXiv API based on a query.
     """
