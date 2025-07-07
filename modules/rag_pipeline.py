@@ -45,7 +45,9 @@ def query_vector_db(query: str, collection_name: str, n_results=5) -> list:
             query_embeddings=[query_embedding],
             n_results=n_results
         )
-        return results.get("documents", [])
+        # The query returns a list of results for each query embedding. 
+        # Since we only pass one, we take the first element.
+        return results.get("documents", [[]])[0]
     except Exception as e:
         print(f"Error querying collection {collection_name}: {e}")
         return []

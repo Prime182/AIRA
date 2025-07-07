@@ -20,15 +20,21 @@ def clone_and_read_repo_files(repo_url: str, clone_dir: str) -> List[Dict[str, s
             origin = repo.remotes.origin
             origin.pull()
 
-        # Define file extensions to parse
-        file_extensions = (".md", ".py", ".js", ".ts")
+        # Define file extensions to parse as plain text
+        # This list can be expanded to include other code files
+        file_extensions = (
+            ".md", ".py", ".js", ".ts", ".html", ".css", ".json", ".yaml", ".yml", 
+            ".java", ".c", ".cpp", ".h", ".hpp", ".cs", ".go", ".php", ".rb", ".swift",
+            ".kt", ".kts", ".scala", ".rs", ".sh", ".ps1", ".bat"
+        )
 
         for root, _, files in os.walk(clone_dir):
             for file in files:
                 if file.endswith(file_extensions):
                     filepath = os.path.join(root, file)
                     try:
-                        with open(filepath, "r", encoding="utf-8") as f:
+                        # Read the file and treat its content as plain text
+                        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                             content = f.read()
                             docs.append({"source": filepath, "content": content})
                     except Exception as e:
@@ -102,8 +108,11 @@ def fetch_docs(query: str, max_repos=3) -> List[Dict[str, str]]:
                 # Create a preview of the README content
                 readme_preview = readme_content[:300] + "..." if len(readme_content) > 300 else readme_content
                 docs.append({
-                    "title": f"{repo.get('full_name')} by {repo.get('owner_login')}",
+                    "title": f"{repo.get('full_name')} by {repo.get('owner_login')} (README Preview)",
                     "content": f"Description: {repo.get('description', 'No description')}\n\nREADME Preview:\n{readme_preview}",
-                    "source": repo.get("html_url")
+                    "metadata": {
+                        "source": repo.get("html_url"),
+                        "is_full_repo": False
+                    }
                 })
     return docs

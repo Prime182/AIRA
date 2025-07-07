@@ -9,28 +9,34 @@ SOURCE_FETCHERS = {
 
 def fetch_all_context(query: str, sources: list) -> list:
     """
-    Fetches context from all specified sources and converts to Document objects.
+    Fetches context from all specified sources, adds a source type to the metadata,
+    and returns them as Document objects.
     """
     all_docs = []
-    for source in sources:
-        if source in SOURCE_FETCHERS:
+    for source_name in sources:
+        if source_name in SOURCE_FETCHERS:
             try:
-                docs_data = SOURCE_FETCHERS[source](query)
+                docs_data = SOURCE_FETCHERS[source_name](query)
+                
+                # This block handles sources that return Document objects directly (e.g., user_local_files)
+                if all(isinstance(d, Document) for d in docs_data):
+                    for doc in docs_data:
+                        doc.metadata['source_type'] = source_name
+                    all_docs.extend(docs_data)
+                    continue
+
+                # This block handles sources that return dictionaries (e.g., arxiv, github_docs)
                 for doc_data in docs_data:
-                    # Determine content and metadata based on the source
-                    if source == "arxiv_api":
-                        content = doc_data.get("summary", "")
-                        metadata = {
-                            "title": doc_data.get("title"),
-                            "pdf_url": doc_data.get("pdf_url"),
-                            "source": "arxiv"
-                        }
-                    else: # For user_local_files and github_docs
-                        content = doc_data.get("content", "")
-                        metadata = {"source": doc_data.get("source")}
+                    content = doc_data.get("content", "")
+                    metadata = doc_data.get("metadata", {})
+                    
+                    # Add or update metadata fields
+                    metadata['source_type'] = source_name
+                    if 'title' in doc_data and 'title' not in metadata:
+                        metadata['title'] = doc_data['title']
                     
                     all_docs.append(Document(page_content=content, metadata=metadata))
 
             except Exception as e:
-                print(f"Error fetching from {source}: {e}")
+                print(f"Error fetching from {source_name}: {e}")
     return all_docs

@@ -26,6 +26,8 @@ if "session_id" not in st.session_state:
     st.session_state.selected_docs = []
     st.session_state.past_chats = load_chat_sessions() # Load existing sessions
     st.session_state.app_stage = "fetching"
+    if "selected_model" not in st.session_state:
+        st.session_state.selected_model = "gemini-1.5-pro" # Default value
 
 # --- Sidebar for Chat History and New Chat ---
 with st.sidebar:
@@ -52,13 +54,36 @@ with st.sidebar:
                     st.rerun()
             with col2:
                 if st.button("Delete", key=f"delete_{chat_id}"):
+                    # Call the backend to delete the session data
+                    try:
+                        delete_url = "http://127.0.0.1:5000/delete_session"
+                        payload = {"session_id": chat_id}
+                        response = requests.post(delete_url, json=payload)
+                        response.raise_for_status()
+                        st.toast(f"Session '{st.session_state.past_chats[chat_id]['topic']}' deleted successfully.")
+                    except requests.exceptions.RequestException as e:
+                        st.error(f"Error deleting session from backend: {e}")
+
+                    # Remove from frontend state
                     del st.session_state.past_chats[chat_id]
-                    save_chat_sessions(st.session_state.past_chats) # Save after deletion
-                    if st.session_state.session_id == chat_id: # If current chat is deleted, start new one
+                    save_chat_sessions(st.session_state.past_chats)
+                    
+                    # If the deleted chat was the active one, reset to a new chat state
+                    if st.session_state.session_id == chat_id:
                         st.session_state.session_id = str(uuid.uuid4())
                         st.session_state.messages = []
+                        st.session_state.fetched_docs = []
+                        st.session_state.selected_docs = []
                         st.session_state.app_stage = "fetching"
                     st.rerun()
+
+    st.header("Settings")
+    st.session_state.selected_model = st.selectbox(
+    "Select a model for Q&A:",
+    ("gemini-1.5-pro", "gemini-1.5-flash","gemini-2.5-pro", "gemini-2.5-flash"),
+    index=0 if st.session_state.selected_model == "gemini-1.5-pro" else 1
+)
+
 
 # --- Main App Logic ---
 
@@ -92,9 +117,24 @@ if st.session_state.app_stage == "fetching":
         st.header("2. Select Documents to Analyze")
         selected_ids = []
         for doc in st.session_state.fetched_docs:
-            # Display the title (repo name and owner for GitHub docs)
-            st.subheader(doc.get('title', doc.get('source', 'Unknown Document')))
-            st.markdown(doc.get('content', 'No content preview available.'))
+            metadata = doc.get('metadata', {})
+            source_type = metadata.get('source_type')
+            
+            # Use filename for local files, otherwise use title
+            if source_type == 'user_local_files':
+                title = metadata.get('source', 'Unknown Local File')
+            else:
+                title = doc.get('title', metadata.get('source', 'Unknown Document'))
+            
+            st.subheader(title)
+
+            # Only show content preview if it's not a local file
+            if source_type != 'user_local_files':
+                content_preview = doc.get('content', 'No content preview available.')
+                if len(content_preview) > 500:
+                    content_preview = content_preview[:500] + "..."
+                st.markdown(content_preview)
+
             # Add a checkbox for selection
             if st.checkbox(f"Select this document", key=doc['id']):
                 selected_ids.append(doc['id'])
@@ -106,49 +146,30 @@ if st.session_state.app_stage == "fetching":
             if not st.session_state.selected_docs:
                 st.warning("Please select at least one document to start a chat.")
             else:
-                st.write("--- Debugging Start Chat ---")
-                st.info("--- Debugging Start Chat ---")
-                st.info(f"Selected Document IDs: {st.session_state.selected_docs}")
-
                 # Determine if any selected document is a GitHub repository
                 is_github_repo_selected = False
                 selected_github_repo_info = None
                 
                 for doc_id in st.session_state.selected_docs:
                     doc = next((d for d in st.session_state.fetched_docs if d['id'] == doc_id), None)
-                    st.info(f"Checking doc_id: {doc_id}")
-                    st.info(f"Retrieved doc: {doc}")
                     if doc:
-                        source_url = doc.get("metadata", {}).get("source", "") # Corrected path to source URL
-                        st.info(f"Doc source: {source_url}")
-                        if "github.com" in source_url:
+                        # Ensure metadata is a dictionary before getting source
+                        metadata = doc.get("metadata") or {}
+                        source_url = metadata.get("source", "")
+                        if source_url and "github.com" in source_url:
                             is_github_repo_selected = True
-                            # Assuming only one GitHub repo will be processed at a time for full RAG
-                            # If multiple are selected, we'll take the first one.
                             selected_github_repo_info = doc
-                            break 
+                            break
                 
-                st.info(f"Is GitHub repo selected: {is_github_repo_selected}")
-                st.info(f"Selected GitHub repo info: {selected_github_repo_info}")
-                st.info(f"Current app stage: {st.session_state.app_stage}")
-                st.info(f"Session ID: {st.session_state.session_id}")
-
                 if is_github_repo_selected:
                     # Process the GitHub repository fully
-                    repo_url = selected_github_repo_info["metadata"]["source"] # Corrected path to source URL
+                    repo_url = selected_github_repo_info["metadata"]["source"]
                     # Extract repo_name from full_name or source URL
-                    full_name = selected_github_repo_info.get("title", "").split(" by ")[0] # "owner/repo_name"
-                    if not full_name or " by " not in selected_github_repo_info.get("title", ""):
-                        # Fallback if title format is unexpected, try to parse from URL
-                        parts = repo_url.split('/')
-                        if len(parts) >= 5:
-                            full_name = f"{parts[3]}/{parts[4]}" # owner/repo
-                        else:
-                            full_name = selected_github_repo_info["id"] # Use ID as fallback name
+                    full_name = selected_github_repo_info.get("title", "").replace(" (README Preview)", "").split(" by ")[0]
                     
                     repo_name_for_collection = full_name.replace("/", "-").replace(".", "_") # Sanitize for collection name
 
-                    with st.spinner(f"Processing GitHub repository '{full_name}' and starting chat..."):
+                    with st.spinner(f"Cloning and processing the full GitHub repository '{full_name}'. This may take a moment..."):
                         process_api_url = "http://127.0.0.1:5000/process_github_repo"
                         process_payload = {"repo_url": repo_url, "repo_name": repo_name_for_collection}
                         try:
@@ -156,17 +177,34 @@ if st.session_state.app_stage == "fetching":
                             process_response.raise_for_status()
                             st.success(f"Repository '{full_name}' processed successfully!")
 
-                            # Now start the chat session using the processed repo as context
+                            # Generate title and summary for the repo
+                            with st.spinner("Generating title and summary for the repository..."):
+                                title_api_url = "http://127.0.0.1:5000/generate_title_and_summary"
+                                # We pass the initial README doc ID to get some context
+                                title_payload = {"document_ids": [selected_github_repo_info['id']]}
+                                try:
+                                    title_response = requests.post(title_api_url, json=title_payload)
+                                    title_response.raise_for_status()
+                                    chat_meta = title_response.json()
+                                    topic = chat_meta.get("title", f"Chat about {full_name}")
+                                    summary = chat_meta.get("summary", "No summary available.")
+                                except requests.exceptions.RequestException as e:
+                                    st.error(f"Error generating title: {e}")
+                                    topic = f"GitHub: {full_name}"
+                                    summary = "Could not generate summary for the repository."
+
+                            # Now start the chat session
                             start_chat_api_url = "http://127.0.0.1:5000/start_chat"
-                            start_chat_payload = {"session_id": repo_name_for_collection} # Use repo_name as session_id
+                            start_chat_payload = {"session_id": repo_name_for_collection, "document_ids": []}
                             start_chat_response = requests.post(start_chat_api_url, json=start_chat_payload)
                             start_chat_response.raise_for_status()
 
                             st.session_state.app_stage = "chatting"
-                            st.session_state.session_id = repo_name_for_collection # Set current session ID
+                            st.session_state.session_id = repo_name_for_collection
                             st.session_state.past_chats[st.session_state.session_id] = {
-                                "topic": f"GitHub: {full_name}",
-                                "messages": start_chat_response.json().get("chat_history", []) # Load existing history if any
+                                "topic": topic,
+                                "summary": summary,
+                                "messages": start_chat_response.json().get("chat_history", [])
                             }
                             st.rerun()
 
@@ -174,6 +212,20 @@ if st.session_state.app_stage == "fetching":
                             st.error(f"Error processing GitHub repository or starting chat: {e}")
                 else:
                     # Proceed with existing logic for non-GitHub documents
+                    with st.spinner("Generating title and summary..."):
+                        title_api_url = "http://127.0.0.1:5000/generate_title_and_summary"
+                        title_payload = {"document_ids": st.session_state.selected_docs}
+                        try:
+                            title_response = requests.post(title_api_url, json=title_payload)
+                            title_response.raise_for_status()
+                            chat_meta = title_response.json()
+                            topic = chat_meta.get("title", "Chat about selected documents")
+                            summary = chat_meta.get("summary", "No summary available.")
+                        except requests.exceptions.RequestException as e:
+                            st.error(f"Error generating title: {e}")
+                            topic = ", ".join([doc['title'] for doc in st.session_state.fetched_docs if doc['id'] in st.session_state.selected_docs])
+                            summary = "Could not generate summary."
+
                     with st.spinner("Processing documents and starting chat..."):
                         api_url = "http://127.0.0.1:5000/start_chat"
                         payload = {"session_id": st.session_state.session_id, "document_ids": st.session_state.selected_docs}
@@ -182,8 +234,9 @@ if st.session_state.app_stage == "fetching":
                             response.raise_for_status()
                             st.session_state.app_stage = "chatting"
                             st.session_state.past_chats[st.session_state.session_id] = {
-                                "topic": ", ".join([doc['title'] for doc in st.session_state.fetched_docs if doc['id'] in st.session_state.selected_docs]),
-                                "messages": response.json().get("chat_history", []) # Load existing history if any
+                                "topic": topic,
+                                "summary": summary,
+                                "messages": response.json().get("chat_history", [])
                             }
                             st.rerun()
                         except requests.exceptions.RequestException as e:
@@ -192,6 +245,12 @@ if st.session_state.app_stage == "fetching":
 # Stage 2: Chatting
 elif st.session_state.app_stage == "chatting":
     st.header("Chat about your selected documents")
+
+    # Display summary if it exists
+    current_chat = st.session_state.past_chats.get(st.session_state.session_id, {})
+    if "summary" in current_chat:
+        with st.expander("Chat Summary", expanded=True):
+            st.markdown(current_chat["summary"])
 
     # Display chat messages
     for message in st.session_state.messages:
@@ -238,9 +297,15 @@ elif st.session_state.app_stage == "chatting":
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        with st.spinner("Thinking..."):
+        with st.spinner("Thinking... (Powered by LangGraph)"):
+            # The /chat endpoint now routes to the LangGraph workflow on the backend.
+            # To display intermediate steps, the backend would need to stream them back.
             api_url = "http://127.0.0.1:5000/chat"
-            payload = {"session_id": st.session_state.session_id, "query": prompt}
+            payload = {
+                "session_id": st.session_state.session_id, 
+                "query": prompt,
+                "model": st.session_state.selected_model
+            }
             try:
                 response = requests.post(api_url, json=payload)
                 response.raise_for_status()
