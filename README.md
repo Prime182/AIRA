@@ -13,7 +13,7 @@ AIRA (AI-Powered Research Agent) is a backend system designed to facilitate rese
 *   **GitHub Integration:**
     *   Search GitHub repositories based on a query.
     *   Fetch and preview `README.md` content for any GitHub repository.
-    *   Process entire GitHub repositories (clone, parse `.md`, `.py`, `.js`, `.ts` files, chunk, and embed) for deep RAG-powered conversations.
+    *   **Deep RAG Integration:** Processes entire GitHub repositories (clones, parses `.md`, `.py`, `.js`, `.ts` files, chunks, and embeds all relevant content) for comprehensive RAG-powered conversations.
 *   **RAG Pipeline:**
     *   Utilizes ChromaDB as a persistent vector store for document embeddings.
     *   Processes and stores documents in session-specific collections.
@@ -21,6 +21,7 @@ AIRA (AI-Powered Research Agent) is a backend system designed to facilitate rese
 *   **LLM-Powered Chat:**
     *   Integrates with the Gemini 1.5 Flash LLM for generating responses.
     *   Maintains **persistent chat memory** for each session, allowing conversations to resume even after refreshing the page or restarting the server.
+*   **Enhanced Code Display:** Automatically detects and beautifully renders code snippets in chat responses within a dedicated container, complete with syntax highlighting and a convenient copy-to-clipboard option.
 *   **Session Management:**
     *   Initialize and re-initialize chat sessions.
     *   Delete chat sessions and their associated data from the vector store.
