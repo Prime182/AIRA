@@ -27,6 +27,7 @@ def get_gemini_response(query: str, context: list, chat_history: list = None) ->
         context_message = f"""
         You are an AI assistant. Based on the following context, please answer the user's query.
         Provide a concise summary and include citations where appropriate.
+        If your answer includes code snippets, format them as Markdown code blocks with the appropriate language (e.g., ```python\\nprint("Hello")\\n```).
 
         Context:
         {" ".join(map(str, context))}

@@ -7,24 +7,104 @@
         "topic": "A load balanced chemistry model with analytical Jacobian for faster reactive simulations in OpenFOAM",
         "messages": []
     },
-    "3f69f8dc-bf09-431e-90e0-4435d41ff6ff": {
-        "topic": "https://github.com/Prime182/AIRA",
+    "Prime182-AIRA": {
+        "topic": "GitHub: Prime182/AIRA",
         "messages": [
             {
                 "role": "user",
-                "content": "tell me about this project"
+                "content": "description"
             },
             {
                 "role": "assistant",
-                "content": "This project, AIRA, is an AI-powered research agent.  Further details about its functionality are not provided in the given context.\n"
+                "content": "AIRA is an AI-powered research agent that uses LLMs and RAG to facilitate research and information retrieval.  It functions as an MCP server, providing tools for context fetching (from arXiv, local files, and GitHub), processing, and intelligent conversations using the Gemini LLM with persistent chat memory [1, 2].  AIRA features a modular architecture, enabling context fetching from multiple sources, GitHub integration (including repository processing for deep RAG), a ChromaDB-based RAG pipeline for persistent document embeddings and session management, and LLM-powered chat with persistent chat memory [1, 2, 5].\n"
             },
             {
                 "role": "user",
-                "content": "don't you have acess to readme file?"
+                "content": "MCP code used in this project"
             },
             {
                 "role": "assistant",
-                "content": "The provided context only shows a snippet of the README file, specifically the project description and the title.  A full README file's contents are not accessible.\n"
+                "content": "The provided text does not include the code for the MCP server itself.  It describes the server's functionality and API endpoints, but the implementation details (code) are not given.  The text mentions that the server exposes capabilities such as context fetching, chat, and GitHub integration via REST API endpoints [1], and that a `/` GET endpoint returns server information [3].  A `research_agent_tool` is defined, suggesting the server handles research queries [2].  However, the actual server code is not present in the provided context.\n"
+            },
+            {
+                "role": "user",
+                "content": "code for mcp"
+            },
+            {
+                "role": "assistant",
+                "content": "The provided text does not contain the full code for the MCP server.  However, snippets reveal parts of its functionality.  The server's `/` endpoint returns server information in JSON format [4]:\n\n```json\n{\n  \"name\": \"ResearchAgent\",\n  \"version\": \"1.0\",\n  \"description\": \"AI-Powered Research Agent backend.\",\n  \"capabilities\": [\"fetch_sources\", \"start_chat\", \"chat\", \"delete_session\", \"search_github_repos\", \"fetch_repo_readme\", \"process_github_repo\"]\n}\n```\n\nA `research_agent_tool` is defined [3], suggesting the server handles research queries, but the implementation details are missing.  The main script shows how to launch the server and a Streamlit UI in separate terminals [2]:\n\n```python\nif __name__ == \"__main__\":\n    # ... (other code) ...\n    backend_command = f\"{python_executable} mcp_server.py\"\n    frontend_command = f\"streamlit run ui/streamlit_app.py\"\n    # ... (rest of the code to launch in separate terminals) ...\n```\n\nThe complete MCP server code (`mcp_server.py`) is not included in the provided context.\n"
+            },
+            {
+                "role": "user",
+                "content": "code for rag"
+            },
+            {
+                "role": "assistant",
+                "content": "The provided text doesn't give the complete RAG code.  However, it shows a snippet initializing ChromaDB and embeddings:\n\n```python\nimport chromadb\nfrom langchain.text_splitter import RecursiveCharacterTextSplitter\nfrom langchain_huggingface import HuggingFaceEmbeddings\n\n# Initialize ChromaDB client\nclient = chromadb.PersistentClient(path=\"./vector_store\")\n\n# Initialize embedding function\nembedding_function = HuggingFaceEmbeddings(model_name=\"all-MiniLM-L6-v2\")\n```\n\nThis code initializes a persistent ChromaDB client and sets up HuggingFace embeddings.  The rest of the RAG pipeline (text splitting, chunking, embedding, and retrieval) is not included.  The description mentions that the RAG pipeline uses ChromaDB for persistent document embeddings and manages session-specific collections [RAG Pipeline].  The `/process_github_repo` endpoint's description indicates that the system processes and embeds content into ChromaDB [Process GitHub Repository for Chat].  However, the specific implementation details are absent from the provided text.\n"
+            },
+            {
+                "role": "user",
+                "content": "code for LLM"
+            },
+            {
+                "role": "assistant",
+                "content": "The provided text doesn't include the code for interacting with the LLM (Gemini 1.5 Flash LLM).  The documentation mentions that Gemini is used for generating responses in the chat endpoint (`/chat`) [7] and maintains persistent chat memory for each session [5, 6].  However, the actual code snippets for making API calls to Gemini or processing its responses are not present.  The code examples show how to use the `/chat` endpoint via `curl`, but not the internal LLM interaction logic.  [7] refers to the `/chat` endpoint.\n"
+            },
+            {
+                "role": "user",
+                "content": "List all files"
+            },
+            {
+                "role": "assistant",
+                "content": "The provided code snippets do not list specific filenames.  Instead, they describe functions that read files from various locations:\n\n* **`read_files` function:** Reads `.txt` and `.pdf` files from a directory specified by `data_dir` (defaulting to \"data/\").  [1]\n* **Code snippet 2:** Reads `.md`, `.py`, `.js`, and `.ts` files from a directory (`clone_dir`), presumably after cloning a GitHub repository. [2]\n\nThe functions dynamically discover files within these directories; no specific file list is provided.\n\n\n[1] Code snippet 1\n[2] Code snippet 2\n\n"
+            },
+            {
+                "role": "user",
+                "content": "what are the files present in this repository"
+            },
+            {
+                "role": "assistant",
+                "content": "The provided text doesn't list specific files present in the repository.  Instead, it describes how the system handles various file types:\n\n*   It processes `.md`, `.py`, `.js`, and `.ts` files from cloned GitHub repositories (Section 5).\n*   It fetches and processes `README.md` files from GitHub repositories (Section 4).\n*   It reads `.txt` and `.pdf` files from a user-specified local directory (implied in Section 3, showing `user_local_files.read_files`).\n\nNo specific filenames are mentioned; the system dynamically interacts with files based on user input or directory contents.\n"
+            },
+            {
+                "role": "user",
+                "content": "how github docs retreival works here"
+            },
+            {
+                "role": "assistant",
+                "content": "AIRA retrieves GitHub repository information through several REST API endpoints:\n\n1.  **`/search_github_repos` (POST):**  This endpoint searches GitHub repositories based on a user-provided query (e.g., `\"langchain\"`). The request body is a JSON object containing the query string.  The response is a list of repository details (full_name, description, html_url, etc.) [3].  A Python function (`search_github_repos`) demonstrates how to use the GitHub REST API to perform this search, extracting specific fields from the results [5].\n\n2.  **`/fetch_repo_readme` (POST):** This endpoint retrieves the raw markdown content of a specified GitHub repository's `README.md` file. The request body is a JSON object containing the repository owner and name.  The response is the raw markdown content of the README [4].\n\n3.  **`/process_github_repo` (POST):** This endpoint clones a specified GitHub repository, parses relevant files (`.md`, `.py`, `.js`, `.ts`), chunks the content, and embeds it into a ChromaDB collection for RAG. This enables deep RAG-powered conversations using the repository's content [5].  The request body includes the repository URL and a unique identifier for the data in the vector store [5].\n\n\nIn summary, AIRA leverages the GitHub REST API for searching repositories and fetching README files.  For more in-depth analysis, it clones and processes entire repositories, embedding the content for retrieval via its RAG pipeline.\n"
+            },
+            {
+                "role": "user",
+                "content": "how github api is used?"
+            },
+            {
+                "role": "assistant",
+                "content": "The AIRA system uses the GitHub API in three ways [3, 4, 5]:\n\n1.  **Repository Search:** The `/search_github_repos` endpoint (POST) uses the GitHub REST API to search for repositories based on a user's query.  The response includes details like `full_name`, `description`, and `html_url` [3]. A Python function (`search_github_repos`) demonstrates interacting with the GitHub API for this search [5].\n\n2.  **README Retrieval:** The `/fetch_repo_readme` endpoint (POST) fetches the raw markdown content of a repository's `README.md` file using the GitHub API [4].\n\n3.  **Repository Processing:** The `/process_github_repo` endpoint (POST) leverages the GitHub API (implicitly through cloning the repository) to obtain the full repository content.  It then processes files (`.md`, `.py`, `.js`, `.ts`), chunks them, and embeds them into a ChromaDB vector store for RAG [5].\n"
+            },
+            {
+                "role": "user",
+                "content": "how LLM is used?"
+            },
+            {
+                "role": "assistant",
+                "content": "AIRA uses the Gemini 1.5 Flash LLM to generate responses in the `/chat` endpoint [7].  The LLM leverages the RAG pipeline to access relevant document chunks from the session's context and maintains persistent chat memory for each session, allowing conversations to continue even after page refreshes or server restarts [2].\n"
+            },
+            {
+                "role": "user",
+                "content": "give me code"
+            },
+            {
+                "role": "assistant",
+                "content": "The provided text includes code snippets demonstrating several aspects of the system.\n\n**1. Gemini API Interaction:** This code shows how to configure the Gemini API using an API key from a `.env` file and how to generate a response from the Gemini LLM given a query and context.\n\n```python\nimport os\nimport google.generativeai as genai\nfrom dotenv import load_dotenv\n\n# Load environment variables from .env file\nload_dotenv()\n\n# Configure the Gemini API\napi_key = os.getenv(\"GEMINI_API_KEY\")\nif not api_key:\n    raise ValueError(\"GEMINI_API_KEY not found in .env file\")\ngenai.configure(api_key=api_key)\n\n# Initialize the model\nmodel = genai.GenerativeModel('gemini-1.5-flash-latest')\n\ndef get_gemini_response(query: str, context: list, chat_history: list = None) -> str:\n    \"\"\"\n    Generates a response from the Gemini LLM based on the query, context, and chat history.\n    \"\"\"\n    # ... (rest of the function is truncated in the provided text)\n```\n\n**2.  `/process_github_repo` Endpoint Example:** This shows a `curl` command (PowerShell) to interact with the `/process_github_repo` endpoint to process a GitHub repository.\n\n```bash\nInvoke-RestMethod -Uri http://127.0.0.1:5000/process_github_repo -Method Post -ContentType \"application/json\" -Body '{\"repo_url\": \"https://github.com/langchain-ai/langchain.git\", \"repo_name\": \"langchain-ai-langchain\"}'\n```\n\nThe complete code for the entire system is not included in the provided text.  These are only illustrative snippets.\n"
+            },
+            {
+                "role": "user",
+                "content": "how the project directory should look like"
+            },
+            {
+                "role": "assistant",
+                "content": "Based on the provided text, the project directory structure isn't explicitly defined, but we can infer some parts based on the code snippets.  There's no single definitive answer, but a plausible structure would include:\n\n*   **`data/`:** This directory stores chat session data (`data/chat_sessions/*.json`) [3] and potentially other data used by the system.  It also appears to be the default location for user-provided local files that the system can read [2].\n*   **`ui/`:**  This directory likely contains the Streamlit application files, including `streamlit_app.py` [2].\n*   **`context_sources/`:** This directory contains modules for fetching context from different sources (arXiv, local files, GitHub) [2].  This would likely contain subdirectories (`arxiv_api`, `user_local_files`, `github_docs`) with respective Python modules.\n*   **`mcp_server.py`:** The main Flask application file for the MCP server [2].\n*   **`requirements.txt`:**  A file listing the project's dependencies.\n\nAdditionally, a `.env` file would be needed in the root directory to store the Gemini API key.  When processing GitHub repositories, a temporary directory will be created to clone the repository.\n\nThe exact organization might vary, but this represents a reasonable structure based on the context.  There's no information about the specific structure for storing user-uploaded local files beyond the `data/` directory.\n"
             }
         ]
     }
