@@ -4,7 +4,7 @@ import uuid
 import json
 import os
 
-st.title("AIRA - AI-Powered Research Agent")
+st.title("AIRA - AI-Powered Research Assistant")
 
 CHAT_SESSIONS_FILE = "chat_sessions.json"
 
@@ -94,11 +94,17 @@ if st.session_state.app_stage == "fetching":
     query = st.text_input("Enter a search query for arXiv or leave blank to see local files:", 
                           help="For arXiv, use keywords like 'machine learning', 'quantum physics', etc.")
     
-    selected_sources = st.multiselect(
-        "Select context sources:",
-        ["arxiv_api", "user_local_files", "github_docs"],
-        default=["arxiv_api"]
+    source = st.radio(
+        "Select context source:",
+        ["user_local_files", "arxiv_api", "github_docs"],
+        index=0,
+        format_func=lambda x: {
+            "user_local_files": "📁 Local Files",
+            "arxiv_api": "🔬 arXiv API",
+            "github_docs": "🐙 GitHub Repo"
+        }[x]
     )
+    selected_sources = [source]
 
     if st.button("Fetch Sources"):
         with st.spinner("Fetching documents..."):
